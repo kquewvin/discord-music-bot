@@ -24,6 +24,9 @@ def run_bot():
     @client.event
     async def on_message(message):
         if message.content.startswith("?play"):
+            if message.author.voice is None:
+                await message.channel.send("You need to be in a voice channel to play music")
+                
             try:
                 voice_client = await message.author.voice.channel.connect()
                 voice_clients[voice_client.guild.id] = voice_client
