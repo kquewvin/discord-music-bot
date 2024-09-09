@@ -4,8 +4,7 @@ import asyncio
 import yt_dlp
 from discord.ext import commands  
 from dotenv import load_dotenv
-
-# Add searchable youtube videos with python requests
+import urllib.parse, urllib.request, re
 
 def run_bot():
     load_dotenv()
@@ -16,6 +15,9 @@ def run_bot():
 
     queues = {}
     voice_clients = {}
+    youtube_base_url = "https://www.youtube.com"
+    youtube_results_url = youtube_base_url + "/results?"
+    youtube_watch_url = youtube_base_url + "/watch?v="
     yt_dl_options = {"format": "bestaudio/best"}
     ytdl = yt_dlp.YoutubeDL(yt_dl_options)
 
@@ -28,13 +30,12 @@ def run_bot():
     async def play_next(ctx):
         if queues[ctx.guild.id] != []:
             link = queues[ctx.guild.id].pop(0)
-            await play(ctx, link)
+            await play(ctx, link=link)
 
     @client.command(name="play")
-    async def play(ctx, link):
+    async def play(ctx, *, link):
         if ctx.author.voice is None:
                 await ctx.channel.send("You need to be in a voice channel to play music")
-
         try:
             voice_client = await ctx.author.voice.channel.connect()
             voice_clients[voice_client.guild.id] = voice_client
@@ -42,14 +43,28 @@ def run_bot():
             print(e)
 
         try:
+            if youtube_base_url not in link:
+                query_string = urllib.parse.urlencode({
+                    'search_query': link
+                })
+
+                content = urllib.request.urlopen(
+                    youtube_results_url + query_string
+                )
+
+                search_results = re.findall(r'/watch\?v=(.{11})', content.read().decode())
+
+                link = youtube_watch_url + search_results[0]
+
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(None, lambda: ytdl.extract_info(link, download=False))
 
-            song = data["url"]
-            player = discord.FFmpegOpusAudio(song, **ffmpeg_options)
+            song_url = data["url"]
+            song_title = data["title"]
+            player = discord.FFmpegOpusAudio(song_url, **ffmpeg_options)
 
             voice_clients[ctx.guild.id].play(player, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(ctx), client.loop))
-            await ctx.channel.send(f"Now playing: {data['title']}")
+            await ctx.channel.send(f"Now playing: {song_title}\nURL: {link}")
 
         except Exception as e:
             print(f"Error: {e}")
@@ -85,7 +100,7 @@ def run_bot():
             print(e)
     
     @client.command(name="queue")
-    async def queue(ctx, url):
+    async def queue(ctx, *, url):
         if ctx.guild.id not in queues:
             queues[ctx.guild.id] = []
         queues[ctx.guild.id].append(url)
