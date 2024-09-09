@@ -40,7 +40,10 @@ def run_bot():
                 player = discord.FFmpegOpusAudio(song, **ffmpeg_options)
 
                 voice_clients[message.guild.id].play(player)
+
+                await message.channel.send(f"Now playing: {data['title']}")
             except Exception as e:
-                print(e)
+                print(f"Error: {e}")
+                await message.channel.send("An error occured while trying to play the song")
 
     client.run(TOKEN)
