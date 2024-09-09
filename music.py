@@ -2,6 +2,7 @@ import discord
 import os
 import asyncio
 import yt_dlp
+from discord import app_commands  
 from dotenv import load_dotenv
 
 # Add queue system
@@ -14,6 +15,7 @@ def run_bot():
     intents.message_content = True
     client = discord.Client(intents=intents)
 
+    queues = {}
     voice_clients = {}
     yt_dl_options = {"format": "bestaudio/best"}
     ytdl = yt_dlp.YoutubeDL(yt_dl_options)
@@ -26,7 +28,7 @@ def run_bot():
     
     @client.event
     async def on_message(message):
-        if message.content.startswith("?play"):
+        if message.content.startswith("/play"):
             if message.author.voice is None:
                 await message.channel.send("You need to be in a voice channel to play music")
 
@@ -46,10 +48,30 @@ def run_bot():
                 player = discord.FFmpegOpusAudio(song, **ffmpeg_options)
 
                 voice_clients[message.guild.id].play(player)
-
                 await message.channel.send(f"Now playing: {data['title']}")
+                
             except Exception as e:
                 print(f"Error: {e}")
                 await message.channel.send("An error occured while trying to play the song")
 
+        if message.content.startswith("/pause"):
+            try:
+                voice_clients[message.guild.id].pause()
+            except Exception as e:
+                print(e)
+
+        if message.content.startswith("/resume"):
+            try:
+                voice_clients[message.guild.id].resume()
+            except Exception as e:
+                print(e)
+        
+        if message.content.startswith("/stop"):
+            try:
+                voice_clients[message.guild.id].stop()
+                await voice_clients[message.guild.id].disconnect()
+                await message.channel.send("Leaving voice channel")
+            except Exception as e:
+                print(e)
+    
     client.run(TOKEN)
