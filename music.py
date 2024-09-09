@@ -4,6 +4,9 @@ import asyncio
 import yt_dlp
 from dotenv import load_dotenv
 
+# Add queue system
+# Add searchable youtube videos with python requests
+
 def run_bot():
     load_dotenv()
     TOKEN = os.getenv("discord_token")
@@ -26,7 +29,7 @@ def run_bot():
         if message.content.startswith("?play"):
             if message.author.voice is None:
                 await message.channel.send("You need to be in a voice channel to play music")
-                
+
             try:
                 voice_client = await message.author.voice.channel.connect()
                 voice_clients[voice_client.guild.id] = voice_client
